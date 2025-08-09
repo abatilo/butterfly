@@ -1,0 +1,29 @@
+# Deploy with: envsubst < pytest-rdma.yaml | kubectl create -f -
+# Set IMAGE_URI to ghcr.io/<owner>/butterfly:<tag>
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: pytest-rdma-
+  namespace: default
+spec:
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: pytest-rdma
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: pytest
+        image: ${IMAGE_URI}
+        imagePullPolicy: Always
+        command:
+        - /bin/bash
+        - -c
+        - |
+          cd /workspace/monarch
+          pytest python/tests/test_rdma.py -v
+        resources:
+          limits:
+            nvidia.com/gpu: 8
+            rdma/ib: 1

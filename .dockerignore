@@ -1,0 +1,73 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Python environments and caches
+.venv
+venv
+env
+ENV
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache
+.tox
+.coverage
+.coverage.*
+htmlcov
+.hypothesis
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+wheels/
+pip-wheel-metadata/
+
+# Documentation
+docs/
+*.rst
+# Keep README.md for the package
+!README.md
+
+# Configuration files
+.env
+.env.*
+*.log
+.python-version
+mise.toml
+
+# Testing
+tests/
+test_*.py
+*_test.py
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+azure-pipelines.yml
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Docker files (we don't need to copy these into the image)
+Dockerfile
+docker-compose*.yml
+.dockerignore
