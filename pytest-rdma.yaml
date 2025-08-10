@@ -15,7 +15,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: pytest
-        image: ${IMAGE_URI}
+        image: ghcr.io/abatilo/butterfly:latest
         imagePullPolicy: Always
         command:
         - /bin/bash

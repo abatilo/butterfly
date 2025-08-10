@@ -9,23 +9,14 @@ hosts.
 
 Docker images are automatically built and pushed to GitHub Container Registry (ghcr.io)
 when changes are pushed to the main branch. Images are available at:
-- `ghcr.io/<owner>/butterfly:latest` - Latest main branch build
-- `ghcr.io/<owner>/butterfly:<sha>` - Specific commit build
+- `ghcr.io/abatilo/butterfly:latest` - Latest main branch build
+- `ghcr.io/abatilo/butterfly:<sha>` - Specific commit build
 
 ### Deploying to Kubernetes
 
-1. Set the image URI environment variable (replace `<owner>` with your GitHub username/org):
+Deploy the Kubernetes Job directly:
 ```bash
-# For latest image
-export IMAGE_URI="ghcr.io/<owner>/butterfly:latest"
-
-# Or for a specific commit
-export IMAGE_URI="ghcr.io/<owner>/butterfly:<commit-sha>"
-```
-
-2. Deploy the Kubernetes Job using envsubst:
-```bash
-envsubst < pytest-rdma.yaml | kubectl create -f -
+kubectl create -f pytest-rdma.yaml
 ```
 
 This will create a Kubernetes Job that runs `pytest python/tests/test_rdma.py -v`
