@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/pytorch:24.10-py3
+FROM nvcr.io/nvidia/pytorch:25.06-py3
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ENV PATH="/root/.cargo/bin:${PATH}"
@@ -7,11 +7,11 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 RUN <<EOF
 apt-get update
 apt-get install -y --no-install-recommends \
-  curl=7.81.0-1ubuntu1.20 \
-  clang=1:14.0-55~exp2 \
-  libibverbs-dev=39.0-1 \
-  ibverbs-providers=39.0-1 \
-  librdmacm-dev=39.0-1
+  curl=* \
+  clang=* \
+  libibverbs-dev=* \
+  ibverbs-providers=* \
+  librdmacm-dev=*
 rm -rf /var/lib/apt/lists/*
 
 # Without this, the monarch build does not work
