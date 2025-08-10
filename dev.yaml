@@ -1,0 +1,56 @@
+apiVersion: leaderworkerset.x-k8s.io/v1
+kind: LeaderWorkerSet
+metadata:
+  name: butterfly
+spec:
+  replicas: 1
+  leaderWorkerTemplate:
+    size: 4
+    restartPolicy: RecreateGroupOnPodRestart
+    leaderTemplate:
+      metadata:
+        labels:
+          role: leader
+      spec:
+        terminationGracePeriodSeconds: 5
+        containers:
+          - name: butterfly-leader
+            image: ghcr.io/abatilo/butterfly:latest
+            command:
+              - bash
+              - -c
+              - |
+                  tail -f /dev/null
+            resources:
+              limits:
+                nvidia.com/gpu: "8"
+                rdma/ib: "1"
+            volumeMounts:
+              - name: dshm
+                mountPath: /dev/shm
+        volumes:
+          - name: dshm
+            emptyDir:
+              medium: Memory
+    workerTemplate:
+      spec:
+        terminationGracePeriodSeconds: 5
+        containers:
+          - name: butterfly-worker
+            image: ghcr.io/abatilo/butterfly:latest
+            command:
+              - bash
+              - -c
+              - |
+                  tail -f /dev/null
+            resources:
+              limits:
+                nvidia.com/gpu: "8"
+                rdma/ib: "1"
+            volumeMounts:
+              - name: dshm
+                mountPath: /dev/shm
+        volumes:
+          - name: dshm
+            emptyDir:
+              medium: Memory
