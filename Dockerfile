@@ -27,4 +27,6 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 pip install --no-cache-dir -r build-requirements.txt
 pip install --no-cache-dir -r python/tests/requirements.txt
 pip install --no-cache-dir --no-build-isolation -e .
+
+cargo install --path monarch_hyperactor --root /usr/local/
 EOF
