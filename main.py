@@ -1,5 +1,6 @@
 import asyncio
 import os
+import socket
 
 import torch
 import torch.distributed as dist
@@ -104,11 +105,18 @@ def demo_basic():
     print(f"Finished running basic DDP example on rank {rank}.")
 
 
-# if __name__ == "__main__":
-#     demo_basic()
-
-
 async def main():
+    # Resolve DNS entries for butterfly service, equivalent to 'dig butterfly.default.svc.cluster.local +short'
+    print("Resolving DNS for butterfly.default.svc.cluster.local")
+    try:
+        # Resolve all IP addresses for the service
+        ips = socket.gethostbyname_ex("butterfly.default.svc.cluster.local")[2]
+        for ip in ips:
+            print(ip)
+        print(f"Found {len(ips)} IP addresses")
+    except socket.gaierror as e:
+        print(f"DNS resolution failed: {e}")
+
     local_proc_mesh = await proc_mesh(
         gpus=WORLD_SIZE,
     )
@@ -120,5 +128,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    demo_basic()
     asyncio.run(main())
