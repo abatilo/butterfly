@@ -16,6 +16,7 @@ spec:
         containers:
           - name: butterfly-leader
             image: ghcr.io/abatilo/butterfly:latest
+            imagePullPolicy: Always
             command:
               - process_allocator
             resources:
@@ -35,6 +36,7 @@ spec:
         containers:
           - name: butterfly-worker
             image: ghcr.io/abatilo/butterfly:latest
+            imagePullPolicy: Always
             command:
               - process_allocator
             resources:
