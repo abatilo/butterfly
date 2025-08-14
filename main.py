@@ -117,9 +117,7 @@ async def main():
     except socket.gaierror as e:
         print(f"DNS resolution failed: {e}")
 
-    local_proc_mesh = await proc_mesh(
-        gpus=WORLD_SIZE,
-    )
+    local_proc_mesh = await proc_mesh(gpus=torch.cuda.device_count(), hosts=2)
     # Spawn our actor mesh on top of the process mesh
     ddp_actor = await local_proc_mesh.spawn("ddp_actor", DDPActor)
     await ddp_actor.setup.call()
