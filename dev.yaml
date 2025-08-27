@@ -5,7 +5,7 @@ metadata:
 spec:
   replicas: 1
   leaderWorkerTemplate:
-    size: 4
+    size: 32
     restartPolicy: RecreateGroupOnPodRestart
     leaderTemplate:
       metadata:
