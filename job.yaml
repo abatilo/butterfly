@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: butterfly-job-
+spec:
+  suspend: true
+  completions: 4
+  parallelism: 4
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: butterfly-job
+    spec:
+      priorityClassName: high-priority
+      restartPolicy: Never
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - butterfly-job
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: butterfly
+          image: ghcr.io/abatilo/butterfly:latest
+          imagePullPolicy: Always
+          command:
+            - bash
+            - -c
+            - |
+              sleep 90
+          resources:
+            limits:
+              nvidia.com/gpu: "8"
+          volumeMounts:
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
