@@ -33,8 +33,7 @@ spec:
               - process_allocator
             resources:
               limits:
-                nvidia.com/gpu: "8"
-                rdma/ib: "1"
+                nvidia.com/gpu: "1"
             volumeMounts:
               - name: dshm
                 mountPath: /dev/shm
@@ -68,7 +67,7 @@ spec:
               - process_allocator
             resources:
               limits:
-                nvidia.com/gpu: "8"
+                nvidia.com/gpu: "1"
                 rdma/ib: "1"
             volumeMounts:
               - name: dshm
