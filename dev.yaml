@@ -13,6 +13,18 @@ spec:
           role: leader
       spec:
         terminationGracePeriodSeconds: 5
+        affinity:
+          podAntiAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                podAffinityTerm:
+                  labelSelector:
+                    matchExpressions:
+                      - key: role
+                        operator: In
+                        values:
+                          - leader
+                  topologyKey: kubernetes.io/hostname
         containers:
           - name: butterfly-leader
             image: ghcr.io/abatilo/butterfly:latest
@@ -31,8 +43,23 @@ spec:
             emptyDir:
               medium: Memory
     workerTemplate:
+      metadata:
+        labels:
+          role: worker
       spec:
         terminationGracePeriodSeconds: 5
+        affinity:
+          podAntiAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                podAffinityTerm:
+                  labelSelector:
+                    matchExpressions:
+                      - key: role
+                        operator: In
+                        values:
+                          - worker
+                  topologyKey: kubernetes.io/hostname
         containers:
           - name: butterfly-worker
             image: ghcr.io/abatilo/butterfly:latest
