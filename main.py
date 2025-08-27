@@ -1,37 +1,13 @@
 import asyncio
-import os
 import socket
 
-import torch
-import torch.distributed as dist
-import torch.nn as nn
-import torch.optim as optim
-from monarch.actor import Actor, current_rank, endpoint, proc_mesh
-from torch.nn.parallel import DistributedDataParallel as DDP
-
-WORLD_SIZE = int(os.getenv("WORLD_SIZE"))
+from monarch.actor import Actor, current_rank, endpoint, proc_mesh, ProcMesh
+from monarch._src.actor.allocator import RemoteAllocator, StaticRemoteAllocInitializer
+from monarch._rust_bindings.monarch_hyperactor.alloc import AllocSpec, AllocConstraints
 
 
-class ToyModel(nn.Module):
-    def __init__(self):
-        super(ToyModel, self).__init__()
-        self.net1 = nn.Linear(10, 10)
-        self.relu = nn.ReLU()
-        self.net2 = nn.Linear(10, 5)
-
-    def forward(self, x):
-        return self.net2(self.relu(self.net1(x)))
-
-
-class DDPActor(Actor):
-    """This Actor wraps the basic functionality from Torch's DDP example.
-
-    Conveniently, all of the methods we need are already laid out for us,
-    so we can just wrap them in the usual Actor endpoint semantic with some
-    light modifications.
-
-    Adapted from: https://docs.pytorch.org/tutorials/intermediate/ddp_tutorial.html#basic-use-case
-    """
+class EchoActor(Actor):
+    """A simple actor with echo functionality for testing."""
 
     def __init__(self):
         self.rank = current_rank().rank
@@ -41,68 +17,16 @@ class DDPActor(Actor):
         print(f"{self.rank=} {msg}")
 
     @endpoint
-    async def setup(self):
-        """Initialize the PyTorch distributed process group."""
-        self._rprint("Initializing torch distributed")
-
-        # create model and move it to GPU with id rank
-        local_rank = int(os.getenv("LOCAL_RANK"))
-        torch.cuda.set_device(local_rank)
-
-        # initialize the process group
-        dist.init_process_group("nccl")
-        self._rprint("Finished initializing torch distributed")
+    async def echo(self, message: str) -> str:
+        """Simple echo function that returns the input message with rank info."""
+        result = f"Echo from rank {self.rank}: {message}"
+        self._rprint(result)
+        return result
 
     @endpoint
-    async def cleanup(self):
-        """Clean up the PyTorch distributed process group."""
-        self._rprint("Cleaning up torch distributed")
-        dist.destroy_process_group()
-
-    @endpoint
-    async def demo_basic(self):
-        """Run a basic DDP training example."""
-        self._rprint("Running basic DDP example")
-
-        device_id = self.rank % torch.cuda.device_count()
-        print(f"{device_id=}")
-
-        model = ToyModel().to(device_id)
-        ddp_model = DDP(model, device_ids=[device_id])
-
-        loss_fn = nn.MSELoss()
-        optimizer = optim.SGD(ddp_model.parameters(), lr=0.001)
-
-        optimizer.zero_grad()
-        outputs = ddp_model(torch.randn(20, 10))
-        labels = torch.randn(20, 5).to(device_id)
-        loss_fn(outputs, labels).backward()
-        optimizer.step()
-
-        print(f"{self.rank=} Finished running basic DDP example")
-
-
-def demo_basic():
-    torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
-    dist.init_process_group("nccl")
-    rank = dist.get_rank()
-    print(f"Start running basic DDP example on rank {rank}.")
-    # create model and move it to GPU with id rank
-    device_id = rank % torch.cuda.device_count()
-    print(f"{device_id=}")
-    model = ToyModel().to(device_id)
-    ddp_model = DDP(model, device_ids=[device_id])
-
-    loss_fn = nn.MSELoss()
-    optimizer = optim.SGD(ddp_model.parameters(), lr=0.001)
-
-    optimizer.zero_grad()
-    outputs = ddp_model(torch.randn(20, 10))
-    labels = torch.randn(20, 5).to(device_id)
-    loss_fn(outputs, labels).backward()
-    optimizer.step()
-    dist.destroy_process_group()
-    print(f"Finished running basic DDP example on rank {rank}.")
+    async def get_rank(self) -> int:
+        """Return the rank of this actor."""
+        return self.rank
 
 
 async def main():
@@ -116,13 +40,54 @@ async def main():
         print(f"Found {len(ips)} IP addresses")
     except socket.gaierror as e:
         print(f"DNS resolution failed: {e}")
+        return
 
-    local_proc_mesh = await proc_mesh(gpus=torch.cuda.device_count(), hosts=2)
-    # Spawn our actor mesh on top of the process mesh
-    ddp_actor = await local_proc_mesh.spawn("ddp_actor", DDPActor)
-    await ddp_actor.setup.call()
-    await ddp_actor.demo_basic.call()
-    await ddp_actor.cleanup.call()
+    # Create remote addresses using resolved IPs and port 26600
+    remote_addresses = [f"tcp!{ip}:26600" for ip in ips]
+
+    print(f"Creating static remote allocator with addresses: {remote_addresses}")
+
+    # Create the static remote allocator
+    allocator = RemoteAllocator(
+        world_id="butterfly_echo_job",
+        initializer=StaticRemoteAllocInitializer(*remote_addresses),
+    )
+
+    # Specify allocation requirements
+    spec = AllocSpec(
+        constraints=AllocConstraints(),
+        host=len(ips),  # Use all resolved hosts
+        gpu=8,  # Use 8 GPUs per host
+    )
+
+    # Allocate resources
+    alloc = allocator.allocate(spec)
+
+    # Wait for allocation to complete
+    await alloc.initialized
+
+    # Create process mesh from allocation
+    remote_proc_mesh = ProcMesh.from_alloc(alloc)
+
+    # Wait for process mesh to be ready
+    await remote_proc_mesh.initialized
+
+    print("Remote allocation successful, spawning actors...")
+
+    # Spawn our actor mesh on top of the remote process mesh
+    echo_actor = await remote_proc_mesh.spawn("echo_actor", EchoActor)
+
+    # Test the echo function
+    message = "Hello from butterfly!"
+    echo_results = await echo_actor.echo.call(message)
+    print(f"Echo results: {echo_results}")
+
+    # Get ranks
+    ranks = await echo_actor.get_rank.call()
+    print(f"Actor ranks: {ranks}")
+
+    # Clean up
+    await remote_proc_mesh.stop()
 
 
 if __name__ == "__main__":
