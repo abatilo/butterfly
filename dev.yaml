@@ -76,3 +76,51 @@ spec:
           - name: dshm
             emptyDir:
               medium: Memory
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: driver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: driver
+  template:
+    metadata:
+      labels:
+        app: driver
+    spec:
+      nodeSelector:
+        compute.coreweave.com/node-pool: a192
+        node.coreweave.cloud/class: cpu
+      tolerations:
+        - key: is_cpu_compute
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - driver
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: driver
+          image: ghcr.io/abatilo/butterfly:latest
+          imagePullPolicy: Always
+          command:
+            - process_allocator
+          volumeMounts:
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
